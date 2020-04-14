@@ -6,8 +6,9 @@
 namespace kfw {
     namespace ac {
         class AcUtils {
-            void setSpeed(float newSpeed);
-            Player* getLocalPlayer();
+        public:
+            static void setSpeed(float newSpeed);
+            static Player* getLocalPlayer();
         };
     }
 }

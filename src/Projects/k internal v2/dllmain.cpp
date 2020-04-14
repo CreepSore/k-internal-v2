@@ -1,6 +1,7 @@
-#include "k-framework/k-framework.h"
-#include "game-structs.h"
 #include <sstream>
+#include "k-framework/k-framework.h"
+#include "ACFramework.h"
+#include "game-structs.h"
 
 auto logger = kfw::core::Logger();
 
@@ -39,7 +40,7 @@ BOOL __stdcall mainThread(LPVOID module) {
     hookManager->registerHook(new kfw::core::HookData((void*)(0x4728f0), fatal, 6, "AC_FATAL", "fatal"));
     hookManager->hookAll();
 
-    Player** lp = (Player**)(0x50f4f4);
+    kfw::ac::AcUtils::setSpeed(32);
 
     while (!GetAsyncKeyState(VK_NUMPAD0)) {
         Sleep(100);
