@@ -1,51 +1,55 @@
 #include <sstream>
+#include <WinSock2.h>
+#include <ws2tcpip.h>
 #include "k-framework/k-framework.h"
+#include "json.hpp"
 #include "ACFramework.h"
+#include "message_types.h"
 #include "game-structs.h"
+#include "Hacks.h"
 
 auto logger = kfw::core::Logger();
 
-void __cdecl addmsg(uint32_t messageType, char* flags, void* ad1, void* ad2, void* ad3, void* ad4, void* ad5, void* ad6, void* ad7, void* ad8) {
-    if (messageType != 0xF && messageType != 47) {
-        std::stringstream ss;
-        ss << "Invalid Message-Type: " << messageType;
-        logger.log(ss.str(), "AC_ADDMSG");
-    }
+void __cdecl addmsg(uint32_t messageType, char* flags, void* addData) {
     auto hook = kfw::core::Factory::getDefaultHookManager()->getHookByIdentifier("AC_ADDMSG")->header;
-    size_t len = strlen(flags);
-
-    switch (len) {
-    case 0:
-    case 1:
-        reinterpret_cast<void(__cdecl*)(uint32_t, char*, ...)>(hook)(messageType, flags);
-        break;
-    
-    default:
-        std::stringstream ss;
-        ss << "Invalid packet length: " << len;
-        logger.log(ss.str(), "AC_ADDMSG");
-        break;
-    }
+    reinterpret_cast<void(__cdecl*)(uint32_t, char*, ...)>(hook)(messageType, flags, addData);
 }
 
 void fatal(char* msg) {
     logger.log(msg, "AC_FATAL");
+    return reinterpret_cast<void(*)(char*)>(kfw::core::Factory::getDefaultHookManager()->getHookByIdentifier("AC_FATAL")->header)(msg);
+}
+
+nlohmann::json constructPlayerData() {
+    Player* lp = kfw::ac::AcUtils::getLocalPlayer();
+    auto posObj = nlohmann::json::object({ {"x", lp->position.x}, {"y", lp->position.y}, {"z", lp->position.z} });
+    auto velObj = nlohmann::json::object({ {"x", lp->velocity.x}, {"y", lp->velocity.y}, {"z", lp->velocity.z} });
+    return nlohmann::json::object({ { "health", lp->health }, {"armor", lp->armor}, {"position", posObj}, {"velocity", velObj } });
 }
 
 BOOL __stdcall mainThread(LPVOID module) {
+    kfw::core::DatabridgeClient dc = kfw::core::DatabridgeClient("78.46.41.219", 1328);
+    dc.establishConnection(true);
+
     kfw::core::Utils::setupConsole();
+    logger.log("Loaded Hack!", "mainThread");
     auto hookManager = kfw::core::Factory::getDefaultHookManager();
+    auto hackManager = kfw::core::Factory::getDefaultHackManager();
 
-    hookManager->registerHook(new kfw::core::HookData((void*)(0x4204B0), addmsg, 6, "AC_ADDMSG", "addmsg"));
-    hookManager->registerHook(new kfw::core::HookData((void*)(0x4728f0), fatal, 6, "AC_FATAL", "fatal"));
-    hookManager->hookAll();
+    //hookManager->registerHook(new kfw::core::HookData((void*)(0x4204b0), addmsg, 6, "AC_ADDMSG", "addmsg"));
+    //hookManager->registerHook(new kfw::core::HookData((void*)(0x4728f0), fatal, 6, "AC_FATAL", "fatal"));
+    //hookManager->hookAll();
 
-    kfw::ac::AcUtils::setSpeed(32);
+    hackManager->registerHack(new kfw::ac::TeleportHack());
 
     while (!GetAsyncKeyState(VK_NUMPAD0)) {
+        hackManager->onEvent("MT_LOOP", nullptr);
+        dc.sendData(kfw::core::DatabridgePacket("PLAYER", constructPlayerData()));
+        
         Sleep(100);
     }
 
+    logger.log("Unloading Hack ...", "mainThread");
     kfw::core::Factory::cleanup();
     Beep(1000, 500);
     FreeLibraryAndExitThread(HMODULE(module), 0);

@@ -8,6 +8,7 @@ namespace kfw {
         class AcUtils {
         public:
             static void setSpeed(float newSpeed);
+            static void printToChat(const char* msg, ...);
             static Player* getLocalPlayer();
         };
     }
