@@ -24,7 +24,7 @@ nlohmann::json constructPlayerData() {
     Player* lp = kfw::ac::AcUtils::getLocalPlayer();
     auto posObj = nlohmann::json::object({ {"x", lp->position.x}, {"y", lp->position.y}, {"z", lp->position.z} });
     auto velObj = nlohmann::json::object({ {"x", lp->velocity.x}, {"y", lp->velocity.y}, {"z", lp->velocity.z} });
-    return nlohmann::json::object({ { "health", lp->health }, {"armor", lp->armor}, {"position", posObj}, {"velocity", velObj } });
+    return nlohmann::json::object({ { "health", lp->health }, { "armor", lp->armor }, { "position", posObj }, { "speed", lp->maxSpeed }, { "velocity", velObj }, { "eyeHeight", lp->eyeHeight } });
 }
 
 BOOL __stdcall mainThread(LPVOID module) {
@@ -41,11 +41,52 @@ BOOL __stdcall mainThread(LPVOID module) {
     //hookManager->hookAll();
 
     hackManager->registerHack(new kfw::ac::TeleportHack());
-
+    kfw::core::DatabridgePacket packet;
     while (!GetAsyncKeyState(VK_NUMPAD0)) {
         hackManager->onEvent("MT_LOOP", nullptr);
         dc.sendData(kfw::core::DatabridgePacket("PLAYER", constructPlayerData()));
         
+        if (dc.receivePacket(packet)) {
+            if (packet.type == "SET_PLAYER_PROPERTY") {
+                try {
+                    std::string target = packet.data.value("target", "invalid");
+                    if (target == "health") {
+                        try {
+                            int value = packet.data.value("value", -1);
+                            if (value > 0) {
+                                kfw::ac::AcUtils::getLocalPlayer()->health = value;
+                            }
+                        }
+                        catch (...) {}
+                    }
+
+                    if (target == "armor") {
+#
+                        int value = packet.data.value("value", -1);
+                        if (value > 0) {
+                            kfw::ac::AcUtils::getLocalPlayer()->armor = value;
+                        }
+                    }
+
+                    if (target == "speed") {
+                        int value = packet.data.value("value", -1);
+                        if (value > 0) {
+                            kfw::ac::AcUtils::setSpeed(value);
+                        }
+                    }
+
+                    if (target == "eye-height") {
+                        float value = packet.data.value<float>("value", -1);
+                        if (value > 0) {
+                            kfw::ac::AcUtils::getLocalPlayer()->eyeHeight = value;
+                            kfw::ac::AcUtils::getLocalPlayer()->maxEyeHeight = value;
+                        }
+                    }
+                }
+                catch (...) { }
+            }
+        }
+
         Sleep(100);
     }
 
