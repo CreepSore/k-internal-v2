@@ -61,7 +61,6 @@ BOOL __stdcall mainThread(LPVOID module) {
                     }
 
                     if (target == "armor") {
-#
                         int value = packet.data.value("value", -1);
                         if (value > 0) {
                             kfw::ac::AcUtils::getLocalPlayer()->armor = value;
