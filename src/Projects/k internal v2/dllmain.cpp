@@ -10,16 +10,6 @@
 
 auto logger = kfw::core::Logger();
 
-void __cdecl addmsg(uint32_t messageType, char* flags, void* addData) {
-    auto hook = kfw::core::Factory::getDefaultHookManager()->getHookByIdentifier("AC_ADDMSG")->header;
-    reinterpret_cast<void(__cdecl*)(uint32_t, char*, ...)>(hook)(messageType, flags, addData);
-}
-
-void fatal(char* msg) {
-    logger.log(msg, "AC_FATAL");
-    return reinterpret_cast<void(*)(char*)>(kfw::core::Factory::getDefaultHookManager()->getHookByIdentifier("AC_FATAL")->header)(msg);
-}
-
 nlohmann::json constructPlayerData() {
     Player* lp = kfw::ac::AcUtils::getLocalPlayer();
     auto posObj = nlohmann::json::object({ {"x", lp->position.x}, {"y", lp->position.y}, {"z", lp->position.z} });
@@ -35,10 +25,6 @@ BOOL __stdcall mainThread(LPVOID module) {
     logger.log("Loaded Hack!", "mainThread");
     auto hookManager = kfw::core::Factory::getDefaultHookManager();
     auto hackManager = kfw::core::Factory::getDefaultHackManager();
-
-    //hookManager->registerHook(new kfw::core::HookData((void*)(0x4204b0), addmsg, 6, "AC_ADDMSG", "addmsg"));
-    //hookManager->registerHook(new kfw::core::HookData((void*)(0x4728f0), fatal, 6, "AC_FATAL", "fatal"));
-    //hookManager->hookAll();
 
     hackManager->registerHack(new kfw::ac::TeleportHack());
     kfw::core::DatabridgePacket packet;
